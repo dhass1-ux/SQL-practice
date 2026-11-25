@@ -48,7 +48,8 @@
         {% for c in customers %}
         <tr>
           <td>{{ c.customer_id }}</td>
-          <td>{{ c.first_name }} {{ c.last_name }}</td>
+          {# url_for builds the address from the route's function name, e.g. /customers/34 #}
+          <td><a href="{{ url_for('customer', customer_id=c.customer_id) }}">{{ c.first_name }} {{ c.last_name }}</a></td>
           <td>{{ c.email or "—" }}</td>
           <td>{{ c.phone or "—" }}</td>
           <td>{{ c.zip or "—" }}</td>

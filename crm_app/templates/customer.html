@@ -1,0 +1,94 @@
+{#
+  customer.html: one customer's page. app.py passes:
+    customer       the customers row (name, email, phone, ...)
+    summary        counts and first/last activity dates
+    rooftops_used  one row per rooftop they've used
+    timeline       every purchase and service visit, newest first
+#}
+{% extends "base.html" %}
+
+{% block title %}{{ customer.first_name }} {{ customer.last_name }} · Dealer CRM{% endblock %}
+
+{% block content %}
+  <h1>{{ customer.first_name }} {{ customer.last_name }}</h1>
+  <p class="subtle">
+    Customer #{{ customer.customer_id }}
+    · {{ customer.email or "no email" }}
+    · {{ customer.phone or "no phone" }}
+    · zip {{ customer.zip or "—" }}
+    · created {{ customer.created_date.strftime("%b %d, %Y") }}
+  </p>
+
+  <div class="stats">
+    <div><span>{{ summary.purchases }}</span>Purchases</div>
+    <div><span>{{ summary.service_visits }}</span>Service visits</div>
+    <div><span>{{ summary.rooftops }}</span>Rooftops used</div>
+    <div><span>{{ summary.first_activity.strftime("%b %Y") if summary.first_activity else "—" }}</span>First activity</div>
+    <div><span>{{ summary.last_activity.strftime("%b %Y") if summary.last_activity else "—" }}</span>Last activity</div>
+  </div>
+
+  {% if not timeline %}
+    <p>No purchases or service visits on record for this customer yet.</p>
+  {% else %}
+
+    <h2>Rooftops used</h2>
+    <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Rooftop</th>
+          <th>Market</th>
+          <th>First visit</th>
+          <th>Last visit</th>
+          <th class="num">Purchases</th>
+          <th class="num">Service</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rooftops_used %}
+        <tr>
+          <td>{{ r.rooftop }}</td>
+          <td>{{ r.market }}</td>
+          <td class="nowrap">{{ r.first_visit.strftime("%b %d, %Y") }}</td>
+          <td class="nowrap">{{ r.last_visit.strftime("%b %d, %Y") }}</td>
+          <td class="num">{{ r.purchases }}</td>
+          <td class="num">{{ r.service_visits }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+
+    <h2>Timeline</h2>
+    <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Rooftop</th>
+          <th>Vehicle</th>
+          <th>Detail</th>
+          <th class="num">Amount</th>
+          <th>Ref</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in timeline %}
+        <tr>
+          <td class="nowrap">{{ e.event_date.strftime("%b %d, %Y") }}</td>
+          <td><span class="tag tag-{{ e.kind | lower }}">{{ e.kind }}</span></td>
+          <td>{{ e.rooftop }}</td>
+          <td>{{ e.vehicle }}</td>
+          <td>{{ e.detail }}</td>
+          <td class="num">${{ "{:,.2f}".format(e.amount) }}</td>
+          <td class="subtle-cell">{{ "Deal" if e.kind == "Purchase" else "RO" }} {{ e.ref_id }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% endif %}
+
+  <p><a href="{{ url_for('search') }}">← Back to search</a></p>
+{% endblock %}

@@ -75,6 +75,111 @@ def search():
     )
 
 
+# One list of everything a customer has done: purchases from `deals` stacked
+# on top of service visits from `service_ros` with UNION ALL (like Append
+# Queries in Power Query). Both halves must return the same columns in the
+# same order, so each half renames its columns to match.
+TIMELINE_SQL = """
+    SELECT d.sold_date AS event_date,
+           'Purchase' AS kind,
+           d.deal_id AS ref_id,
+           r.name AS rooftop,
+           CONCAT(v.model_year, ' ', v.make, ' ', v.model) AS vehicle,
+           CONCAT(v.new_used, ' · ', d.deal_type) AS detail,
+           d.sale_price AS amount
+    FROM deals d
+    JOIN rooftops r ON r.rooftop_id = d.rooftop_id
+    JOIN vehicles v ON v.vin = d.vin
+    WHERE d.customer_id = %s
+
+    UNION ALL
+
+    SELECT s.ro_date,
+           'Service',
+           s.ro_id,
+           r.name,
+           CONCAT(v.model_year, ' ', v.make, ' ', v.model),
+           CONCAT(s.pay_type, ' pay'),
+           s.labor_total + s.parts_total
+    FROM service_ros s
+    JOIN rooftops r ON r.rooftop_id = s.rooftop_id
+    JOIN vehicles v ON v.vin = s.vin
+    WHERE s.customer_id = %s
+
+    ORDER BY event_date DESC, ref_id DESC
+"""
+
+# One row per rooftop the customer has used, built from the same stacked list.
+ROOFTOPS_USED_SQL = """
+    SELECT r.name AS rooftop,
+           r.market,
+           MIN(x.event_date) AS first_visit,
+           MAX(x.event_date) AS last_visit,
+           SUM(x.kind = 'Purchase') AS purchases,
+           SUM(x.kind = 'Service') AS service_visits
+    FROM (
+        SELECT rooftop_id, sold_date AS event_date, 'Purchase' AS kind
+        FROM deals WHERE customer_id = %s
+        UNION ALL
+        SELECT rooftop_id, ro_date, 'Service'
+        FROM service_ros WHERE customer_id = %s
+    ) AS x
+    JOIN rooftops r ON r.rooftop_id = x.rooftop_id
+    GROUP BY r.rooftop_id, r.name, r.market
+    ORDER BY last_visit DESC
+"""
+
+
+# <int:customer_id> means Flask only accepts digits here, and hands the
+# number to the function. /customers/abc never reaches this code.
+@app.route("/customers/<int:customer_id>")
+def customer(customer_id):
+    """One customer: details, rooftops used, and a combined timeline."""
+    found = query(
+        """
+        SELECT customer_id, first_name, last_name, email, phone, zip, created_date
+        FROM customers
+        WHERE customer_id = %s
+        """,
+        (customer_id,),
+    )
+    if not found:
+        return render_template(
+            "not_found.html", message=f"There's no customer #{customer_id}."
+        ), 404
+
+    # The same id fills both %s placeholders (one in each half of the UNION).
+    timeline = query(TIMELINE_SQL, (customer_id, customer_id))
+    rooftops_used = query(ROOFTOPS_USED_SQL, (customer_id, customer_id))
+
+    # Summary numbers, counted from the timeline we already have
+    # (no need to ask the database again).
+    dates = [event["event_date"] for event in timeline]
+    summary = {
+        "purchases": sum(1 for e in timeline if e["kind"] == "Purchase"),
+        "service_visits": sum(1 for e in timeline if e["kind"] == "Service"),
+        "rooftops": len(rooftops_used),
+        "first_activity": min(dates) if dates else None,
+        "last_activity": max(dates) if dates else None,
+    }
+
+    return render_template(
+        "customer.html",
+        customer=found[0],
+        timeline=timeline,
+        rooftops_used=rooftops_used,
+        summary=summary,
+    )
+
+
+# Any address the app doesn't know (including /customers/abc).
+@app.errorhandler(404)
+def page_not_found(error):
+    return render_template(
+        "not_found.html", message="That page doesn't exist."
+    ), 404
+
+
 # If the database can't be reached, or .env isn't filled in, show a friendly
 # page that explains what to check instead of a wall of error text.
 @app.errorhandler(DatabaseConfigError)
