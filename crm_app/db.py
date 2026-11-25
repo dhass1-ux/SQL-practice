@@ -68,3 +68,18 @@ def query(sql, params=()):
     finally:
         # Always hang up, even if the query failed.
         connection.close()
+
+
+def like_pattern(text):
+    """
+    Turn search text into a LIKE pattern meaning "contains this text".
+
+    In LIKE, % means "any characters" and _ means "any one character".
+    If someone searches for a literal % or _, we put a backslash in front
+    so MySQL treats it as an ordinary character, not a wildcard.
+
+        like_pattern("rogers")  ->  "%rogers%"
+        like_pattern("50%")     ->  "%50\\%%"   (finds the text "50%", not everything)
+    """
+    escaped = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return "%" + escaped + "%"

@@ -10,8 +10,14 @@
   <title>{% block title %}Dealer CRM{% endblock %}</title>
   <style>
     body { font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; color: #1f2933; background: #f5f7fa; }
-    header { background: #1f2933; color: #fff; padding: 14px 24px; }
-    header a { color: #fff; text-decoration: none; font-weight: 600; font-size: 18px; }
+    header { background: #1f2933; color: #fff; padding: 14px 24px; display: flex; gap: 24px; align-items: baseline; }
+    header a { color: #cbd2d9; text-decoration: none; }
+    header a:hover { color: #fff; }
+    header .brand { color: #fff; font-weight: 600; font-size: 18px; margin-right: 8px; }
+    .search { display: flex; gap: 8px; margin: 0 0 16px; }
+    .search input { flex: 1; font-size: 16px; padding: 8px 10px; border: 1px solid #cbd2d9; border-radius: 4px; }
+    .search button { font-size: 16px; padding: 8px 16px; border: 0; border-radius: 4px; background: #1f2933; color: #fff; cursor: pointer; }
+    .num { text-align: right; }
     main { max-width: 960px; margin: 24px auto; padding: 0 16px; }
     h1 { font-size: 22px; margin: 0 0 4px; }
     .subtle { color: #616e7c; margin: 0 0 16px; }
@@ -23,7 +29,11 @@
   </style>
 </head>
 <body>
-  <header><a href="/">Dealer CRM</a></header>
+  <header>
+    <a href="/" class="brand">Dealer CRM</a>
+    <a href="/">Rooftops</a>
+    <a href="/search">Search</a>
+  </header>
   <main>
     {% block content %}{% endblock %}
   </main>
