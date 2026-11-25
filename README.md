@@ -62,7 +62,7 @@ If you practice from a different network later (a coffee shop, for example), add
    - Hostname: your server name from Azure's Overview page, e.g. `dhass-sql-practice.mysql.database.azure.com`
    - Port: `3306`
    - Username: the admin username you picked
-   - **SSL** tab: set "Use SSL" to **Require**. Azure only accepts encrypted connections.
+   - **SSL** tab (called **TLS** in newer versions of Workbench): set the SSL mode to **Required**. Leave the certificate fields blank. Azure only accepts encrypted connections.
 3. Click **Test Connection**, enter your password, then **OK**.
 
 ### 3. Build and fill the database
