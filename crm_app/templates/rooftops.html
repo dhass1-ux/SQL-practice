@@ -1,0 +1,37 @@
+{#
+  rooftops.html: the home page. app.py hands it a list called `rooftops`;
+  the {% for %} loop below writes one table row per rooftop.
+#}
+{% extends "base.html" %}
+
+{% block title %}Rooftops · Dealer CRM{% endblock %}
+
+{% block content %}
+  <h1>Rooftops</h1>
+  <p class="subtle">{{ rooftops | length }} locations, read live from the dealer_practice database.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Brand</th>
+        <th>Market</th>
+        <th>Luxury</th>
+        <th>Opened</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rooftops %}
+      <tr>
+        <td>{{ r.rooftop_id }}</td>
+        <td>{{ r.name }}</td>
+        <td>{{ r.brand }}</td>
+        <td>{{ r.market }}</td>
+        <td>{{ "Yes" if r.is_luxury else "" }}</td>
+        <td>{{ r.opened_date.strftime("%b %Y") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

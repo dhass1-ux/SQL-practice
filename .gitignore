@@ -1,0 +1,18 @@
+# Files git should never track or commit.
+# This repo is PUBLIC, so anything secret must be listed here.
+
+# Secrets: database host, username and password live in .env files.
+.env
+.env.*
+!.env.example
+
+# Python virtual environments (each person rebuilds their own from requirements.txt)
+.venv/
+venv/
+
+# Files Python creates automatically when it runs code
+__pycache__/
+*.pyc
+
+# macOS Finder clutter
+.DS_Store
