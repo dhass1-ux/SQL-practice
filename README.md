@@ -67,10 +67,10 @@ If you practice from a different network later (a coffee shop, for example), add
 
 ### 3. Build and fill the database
 
-In Workbench, open your connection, then:
+Workbench needs the **contents** of each script, not its file name. Typing `sql/01_create_schema.sql` into the editor gives a syntax error (1064).
 
-1. **File → Open SQL Script** → `sql/01_create_schema.sql` → click the lightning bolt to run it.
-2. **File → Open SQL Script** → `sql/02_seed_data.sql` → run it. This one takes a little longer.
+1. On GitHub, open `sql/01_create_schema.sql` and click **Copy raw file** (the two-squares icon). Paste it into the Workbench editor and run the whole script (not just the current line).
+2. Do the same with `sql/02_seed_data.sql`. It's about 1 MB, so it takes a little longer. If pasting freezes Workbench, click **Download raw file** on GitHub and open the downloaded file from Workbench's File menu instead.
 3. Open a new query tab and run this to check it worked:
 
 ```sql
