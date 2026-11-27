@@ -61,6 +61,24 @@
     .manual { background: #fff; border: 1px solid #e4e7eb; border-radius: 6px; padding: 14px 16px; margin-top: 28px; }
     .manual input { width: 90px; font-size: 14px; padding: 6px 8px; border: 1px solid #cbd2d9; border-radius: 4px; }
     @media (max-width: 640px) { .pair-records { grid-template-columns: 1fr; } }
+
+    /* Notes and follow-ups */
+    .note-form { background: #fff; border: 1px solid #e4e7eb; border-radius: 6px; padding: 12px; margin: 0 0 12px; }
+    .note-form textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 15px; padding: 8px 10px; border: 1px solid #cbd2d9; border-radius: 4px; resize: vertical; }
+    .note-form-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+    .note-form-row button { margin-left: auto; }
+    .note-form input[type=date] { font: inherit; font-size: 14px; padding: 4px 6px; border: 1px solid #cbd2d9; border-radius: 4px; }
+    .note { background: #fff; border: 1px solid #e4e7eb; border-radius: 6px; padding: 10px 14px; margin: 0 0 8px; }
+    .note-done { background: #fafbfc; }
+    .note-done .note-body { color: #616e7c; }
+    .note-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .note-meta { color: #7b8794; font-size: 13px; margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
+    .note-buttons { margin-left: auto; display: flex; gap: 6px; }
+    .note-buttons button { font-size: 12px; padding: 3px 10px; }
+    .tag-overdue { background: #fde8e8; color: #9b1c1c; }
+    .tag-today { background: #fff3c4; color: #8d5b00; }
+    .tag-open { background: #e6f0fb; color: #1f4f85; }
+    .tag-done { background: #e3f8e9; color: #1b6b35; }
   </style>
 </head>
 <body>
@@ -69,6 +87,7 @@
     <a href="{{ url_for('rooftops') }}">Rooftops</a>
     <a href="{{ url_for('search') }}">Search</a>
     <a href="{{ url_for('duplicates') }}">Duplicates</a>
+    <a href="{{ url_for('follow_ups') }}">Follow-ups</a>
   </header>
   <main>
     {# Messages saved with flash() in app.py appear once, on the next page. #}

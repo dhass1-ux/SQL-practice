@@ -1,0 +1,62 @@
+{#
+  _notes.html: pieces shared by the customer page and the Follow-ups page.
+  The leading underscore is a common way to say "not a page on its own".
+  Other templates use it with:  {% from "_notes.html" import note_item with context %}
+  "with context" lets these pieces see page-wide values such as `today`;
+  without it, Jinja hides them and the page fails with "'today' is undefined".
+#}
+
+{# The little buttons: Done / Reopen / Delete. `back` says where to return afterwards. #}
+{% macro note_buttons(n, back) %}
+  {% if n.follow_up_date and not n.done_at %}
+    <form method="post" action="{{ url_for('note_done') }}" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="note_id" value="{{ n.note_id }}">
+      <input type="hidden" name="back" value="{{ back }}">
+      <button type="submit">Done</button>
+    </form>
+  {% elif n.done_at %}
+    <form method="post" action="{{ url_for('note_reopen') }}" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="note_id" value="{{ n.note_id }}">
+      <input type="hidden" name="back" value="{{ back }}">
+      <button type="submit" class="secondary">Reopen</button>
+    </form>
+  {% endif %}
+  {# onsubmit runs a tiny bit of JavaScript: the browser's own "Are you sure?" box. #}
+  <form method="post" action="{{ url_for('note_delete') }}" class="inline"
+        onsubmit="return confirm('Delete this note? This can\'t be undone.');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="note_id" value="{{ n.note_id }}">
+    <input type="hidden" name="back" value="{{ back }}">
+    <button type="submit" class="secondary">Delete</button>
+  </form>
+{% endmacro %}
+
+{# "Due Dec 01, 2026" plus an Overdue / Due today tag, or "Done ..." #}
+{% macro due_line(n) %}
+  {% if n.done_at %}
+    <span class="tag tag-done">Done</span> {{ n.done_at | local_time }}
+    · was due {{ n.follow_up_date.strftime("%a %b %d, %Y") }}
+  {% elif n.follow_up_date %}
+    {% if n.follow_up_date < today %}<span class="tag tag-overdue">Overdue</span>
+    {% elif n.follow_up_date == today %}<span class="tag tag-today">Due today</span>
+    {% else %}<span class="tag tag-open">Follow-up</span>{% endif %}
+    due {{ n.follow_up_date.strftime("%a %b %d, %Y") }}
+  {% endif %}
+{% endmacro %}
+
+{# One note on the customer page. #}
+{% macro note_item(n, back, show_record=false) %}
+  <div class="note {{ 'note-done' if n.done_at }}">
+    {# white-space: pre-wrap (in base.html) keeps your line breaks.
+       The text is still HTML-escaped, so a note can't inject code. #}
+    <div class="note-body">{{ n.body }}</div>
+    <div class="note-meta">
+      {% if n.follow_up_date %}{{ due_line(n) }} · {% endif %}
+      written {{ n.created_at | local_time }}
+      {% if show_record %} · on record #{{ n.customer_id }}{% endif %}
+      <span class="note-buttons">{{ note_buttons(n, back) }}</span>
+    </div>
+  </div>
+{% endmacro %}

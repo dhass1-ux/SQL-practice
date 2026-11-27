@@ -7,8 +7,11 @@
     summary        counts and first/last activity dates, across all records
     rooftops_used  one row per rooftop they've used
     timeline       every purchase and service visit, newest first
+    open_follow_ups  follow-ups not done yet, soonest first
+    other_notes      plain notes and finished follow-ups, newest first
 #}
 {% extends "base.html" %}
+{% from "_notes.html" import note_item with context %}
 
 {% block title %}{{ customer.first_name }} {{ customer.last_name }} · Dealer CRM{% endblock %}
 
@@ -37,6 +40,30 @@
     <div><span>{{ summary.first_activity.strftime("%b %Y") if summary.first_activity else "—" }}</span>First activity</div>
     <div><span>{{ summary.last_activity.strftime("%b %Y") if summary.last_activity else "—" }}</span>Last activity</div>
   </div>
+
+  <h2>Notes &amp; follow-ups</h2>
+  <form method="post" action="{{ url_for('add_note') }}" class="note-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="customer_id" value="{{ opened_id }}">
+    <input type="hidden" name="back" value="{{ opened_id }}">
+    <textarea name="body" rows="3" maxlength="{{ note_max_length }}" required
+              placeholder="e.g. Called about trade-in, wants a quote"></textarea>
+    <div class="note-form-row">
+      <label>Follow up on <input type="date" name="follow_up_date"></label>
+      <span class="subtle-cell">Leave the date empty for a plain note.</span>
+      <button type="submit">Save note</button>
+    </div>
+  </form>
+
+  {% for n in open_follow_ups %}
+    {{ note_item(n, opened_id, show_record=linked) }}
+  {% endfor %}
+  {% for n in other_notes %}
+    {{ note_item(n, opened_id, show_record=linked) }}
+  {% endfor %}
+  {% if not open_follow_ups and not other_notes %}
+    <p class="subtle">No notes yet.</p>
+  {% endif %}
 
   {% if linked %}
     <h2>Records for this person</h2>
