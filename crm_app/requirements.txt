@@ -4,3 +4,4 @@ flask==3.1.*          # the web framework: maps web addresses to Python function
 pymysql==1.1.*        # lets Python talk to MySQL
 python-dotenv==1.1.*  # reads settings from the .env file
 certifi               # trusted certificate list, used to verify the Azure SSL connection
+flask-wtf==1.2.*      # adds a secret token to forms so other websites can't submit them (CSRF protection)

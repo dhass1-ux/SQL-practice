@@ -12,7 +12,10 @@
       <li>Does <code>crm_app/.env</code> exist, with every value filled in?</li>
       <li>Is the Azure server running? A stopped server has to be started from its Overview page in the Azure portal.</li>
       <li>Is your current IP address allowed under the server's <strong>Networking</strong> page?</li>
-      <li>Did the <code>crm_reader</code> user get created, and does the password in .env match?</li>
+      <li>Does the user named in <code>DB_USER</code> exist, and does the password in .env match?</li>
+      <li>Does the error mention <code>crm</code> (for example "Unknown database 'crm'" or "doesn't exist")?
+          Run <code>crm_app/sql/crm_schema.sql</code> in Workbench as your admin user.</li>
+      <li>Does it say "command denied"? The user in .env is missing a permission. <code>crm_app</code> needs the GRANT lines from <code>crm_schema.sql</code>.</li>
     </ul>
   </div>
 {% endblock %}

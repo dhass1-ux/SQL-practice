@@ -1,7 +1,10 @@
 {#
-  customer.html: one customer's page. app.py passes:
-    customer       the customers row (name, email, phone, ...)
-    summary        counts and first/last activity dates
+  customer.html: one PERSON's page. app.py passes:
+    customer       the MAIN record (name, email, phone, ...)
+    opened_id      the customer number in the address (may be a linked record)
+    records        every record for this person: main first, then linked ones
+    group_links    {linked record id: link details (reason, date)}
+    summary        counts and first/last activity dates, across all records
     rooftops_used  one row per rooftop they've used
     timeline       every purchase and service visit, newest first
 #}
@@ -10,6 +13,14 @@
 {% block title %}{{ customer.first_name }} {{ customer.last_name }} · Dealer CRM{% endblock %}
 
 {% block content %}
+  {% set linked = records | length > 1 %}
+
+  {% if opened_id != customer.customer_id %}
+    <div class="notice">
+      You opened customer #{{ opened_id }}, which is linked to this person's main record, #{{ customer.customer_id }}.
+    </div>
+  {% endif %}
+
   <h1>{{ customer.first_name }} {{ customer.last_name }}</h1>
   <p class="subtle">
     Customer #{{ customer.customer_id }}
@@ -26,6 +37,36 @@
     <div><span>{{ summary.first_activity.strftime("%b %Y") if summary.first_activity else "—" }}</span>First activity</div>
     <div><span>{{ summary.last_activity.strftime("%b %Y") if summary.last_activity else "—" }}</span>Last activity</div>
   </div>
+
+  {% if linked %}
+    <h2>Records for this person</h2>
+    <p class="subtle">Combined from {{ records | length }} customer records. The originals are unchanged; links are managed on the <a href="{{ url_for('duplicates', tab='linked') }}">Duplicates</a> page.</p>
+    <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Record</th><th>Name</th><th>Email</th><th>Phone</th><th>Created</th><th>Linked because</th></tr>
+      </thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td class="nowrap">#{{ r.customer_id }}</td>
+          <td>{{ r.first_name }} {{ r.last_name }}</td>
+          <td>{{ r.email or "—" }}</td>
+          <td class="nowrap">{{ r.phone or "—" }}</td>
+          <td class="nowrap">{{ r.created_date.strftime("%b %d, %Y") }}</td>
+          <td>
+            {% if r.customer_id in group_links %}
+              {{ group_links[r.customer_id].match_reason }}
+            {% else %}
+              <span class="tag tag-linked">Main record</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% endif %}
 
   {% if not timeline %}
     <p>No purchases or service visits on record for this customer yet.</p>
@@ -71,6 +112,7 @@
           <th>Detail</th>
           <th class="num">Amount</th>
           <th>Ref</th>
+          {% if linked %}<th>Record</th>{% endif %}
         </tr>
       </thead>
       <tbody>
@@ -83,6 +125,7 @@
           <td>{{ e.detail }}</td>
           <td class="num">${{ "{:,.2f}".format(e.amount) }}</td>
           <td class="subtle-cell">{{ "Deal" if e.kind == "Purchase" else "RO" }} {{ e.ref_id }}</td>
+          {% if linked %}<td class="subtle-cell">#{{ e.record_id }}</td>{% endif %}
         </tr>
         {% endfor %}
       </tbody>
