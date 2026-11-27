@@ -1,0 +1,36 @@
+{#
+  follow_ups.html: every open follow-up across all customers, soonest first.
+  app.py passes `items`; `today` comes from add_today() in app.py.
+#}
+{% extends "base.html" %}
+{% from "_notes.html" import due_line, note_buttons with context %}
+
+{% block title %}Follow-ups · Dealer CRM{% endblock %}
+
+{% block content %}
+  <h1>Follow-ups</h1>
+  {% set overdue = items | selectattr("follow_up_date", "lt", today) | list %}
+  <p class="subtle">
+    {{ items | length }} open{% if overdue %}, {{ overdue | length }} overdue{% endif %}.
+    Add follow-ups from any customer's page.
+  </p>
+
+  {% if not items %}
+    <p>Nothing to follow up on.</p>
+  {% endif %}
+
+  {% for n in items %}
+    <div class="note">
+      <div class="note-meta" style="margin:0 0 6px">
+        <a href="{{ url_for('customer', customer_id=n.customer_id) }}"><strong>{{ n.first_name }} {{ n.last_name }}</strong></a>
+        <span class="subtle-cell">#{{ n.customer_id }}</span>
+        · {{ due_line(n) }}
+      </div>
+      <div class="note-body">{{ n.body }}</div>
+      <div class="note-meta">
+        written {{ n.created_at | local_time }}
+        <span class="note-buttons">{{ note_buttons(n, "follow-ups") }}</span>
+      </div>
+    </div>
+  {% endfor %}
+{% endblock %}

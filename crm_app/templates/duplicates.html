@@ -99,7 +99,7 @@
             <td><a href="{{ url_for('customer', customer_id=l.primary_id) }}">{{ l.main_name }}</a> <span class="subtle-cell">#{{ l.primary_id }}</span></td>
             <td><a href="{{ url_for('customer', customer_id=l.duplicate_id) }}">{{ l.extra_name }}</a> <span class="subtle-cell">#{{ l.duplicate_id }}</span></td>
             <td>{{ l.match_reason }}</td>
-            <td class="nowrap">{{ l.linked_at.strftime("%b %d, %Y %H:%M") }}</td>
+            <td class="nowrap">{{ l.linked_at | local_time }}</td>
             <td>
               <form method="post" action="{{ url_for('unlink') }}" class="inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -129,7 +129,7 @@
           <tr>
             <td><a href="{{ url_for('customer', customer_id=n.customer_id_low) }}">{{ n.low_name }}</a> <span class="subtle-cell">#{{ n.customer_id_low }}</span></td>
             <td><a href="{{ url_for('customer', customer_id=n.customer_id_high) }}">{{ n.high_name }}</a> <span class="subtle-cell">#{{ n.customer_id_high }}</span></td>
-            <td class="nowrap">{{ n.decided_at.strftime("%b %d, %Y %H:%M") }}</td>
+            <td class="nowrap">{{ n.decided_at | local_time }}</td>
             <td>
               <form method="post" action="{{ url_for('undo_different') }}" class="inline">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

@@ -9,12 +9,15 @@ back to a normal page, so pressing Refresh can't repeat the action.
 
 import os
 import re
+from datetime import date, timezone
+from zoneinfo import ZoneInfo
 
 import pymysql
 from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_wtf.csrf import CSRFError, CSRFProtect
 
 import links
+import notes
 from db import (
     DatabaseConfigError,
     close_request_connection,
@@ -41,6 +44,25 @@ CSRFProtect(app)
 app.teardown_appcontext(close_request_connection)
 
 SEARCH_LIMIT = 50  # most rows a search will show
+
+# The Azure server keeps time in UTC (5 hours ahead of Buffalo in winter).
+# Times are stored in UTC and converted to this time zone only for display.
+LOCAL_TIMEZONE = ZoneInfo("America/New_York")
+
+
+@app.template_filter("local_time")
+def local_time(value, fmt="%b %d, %Y %I:%M %p"):
+    """In a template: {{ note.created_at | local_time }} -> "Nov 26, 2026 10:05 PM"."""
+    if value is None:
+        return ""
+    utc_time = value.replace(tzinfo=timezone.utc)  # the database gives it without a zone
+    return utc_time.astimezone(LOCAL_TIMEZONE).strftime(fmt)
+
+
+@app.context_processor
+def add_today():
+    """Makes `today` (your computer's date, not the server's) available in every template."""
+    return {"today": date.today()}
 
 
 @app.route("/")
@@ -194,10 +216,15 @@ def customer(customer_id):
         "last_activity": max(dates) if dates else None,
     }
 
+    open_follow_ups, other_notes = notes.notes_for(ids)
+
     return render_template(
         "customer.html",
         customer=records[main_id],
         opened_id=customer_id,
+        open_follow_ups=open_follow_ups,
+        other_notes=other_notes,
+        note_max_length=notes.MAX_LENGTH,
         records=[records[i] for i in ids],
         group_links={link["duplicate_id"]: link for link in group_links},
         timeline=timeline,
@@ -300,6 +327,78 @@ def undo_different():
     except links.LinkError as problem:
         flash(str(problem), "error")
     return back_to("different")
+
+
+# ---------------------------------------------------------------- notes and follow-ups
+
+@app.route("/follow-ups")
+def follow_ups():
+    """Every open follow-up across all customers: your to-do list."""
+    return render_template("follow_ups.html", items=notes.open_follow_ups())
+
+
+def go_back():
+    """
+    After a note action, return to where the form was: the Follow-ups page,
+    or a customer page. `back` is checked to be digits, so it can only ever
+    lead to a page inside this app.
+    """
+    back = request.form.get("back", "")
+    if back.isdigit():
+        return redirect(url_for("customer", customer_id=int(back)))
+    return redirect(url_for("follow_ups"))
+
+
+def form_note_id():
+    value = request.form.get("note_id", "")
+    if not value.isdigit():
+        raise notes.NoteError("Missing note number. Refresh the page and try again.")
+    return int(value)
+
+
+@app.post("/notes/add")
+def add_note():
+    try:
+        customer_id = form_id("customer_id")
+        notes.add_note(
+            customer_id,
+            request.form.get("body", ""),
+            request.form.get("follow_up_date", ""),
+        )
+        flash("Note saved.", "ok")
+    except (notes.NoteError, links.LinkError) as problem:
+        flash(str(problem), "error")
+    return go_back()
+
+
+@app.post("/notes/done")
+def note_done():
+    try:
+        notes.set_done(form_note_id(), done=True)
+        flash("Follow-up marked done.", "ok")
+    except notes.NoteError as problem:
+        flash(str(problem), "error")
+    return go_back()
+
+
+@app.post("/notes/reopen")
+def note_reopen():
+    try:
+        notes.set_done(form_note_id(), done=False)
+        flash("Follow-up reopened.", "ok")
+    except notes.NoteError as problem:
+        flash(str(problem), "error")
+    return go_back()
+
+
+@app.post("/notes/delete")
+def note_delete():
+    try:
+        notes.delete_note(form_note_id())
+        flash("Note deleted.", "ok")
+    except notes.NoteError as problem:
+        flash(str(problem), "error")
+    return go_back()
 
 
 # ---------------------------------------------------------------- error pages
