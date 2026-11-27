@@ -1,0 +1,149 @@
+{#
+  duplicates.html: review likely duplicates and record decisions. app.py passes:
+    tab     "review", "linked" or "different"
+    rows    pairs to review, links, or "different people" pairs (depends on tab)
+    counts  how many are in each tab
+
+  Every form here uses method="post" and carries csrf_token(): a hidden
+  secret that proves the form came from this app (see CSRFProtect in app.py).
+#}
+{% extends "base.html" %}
+
+{% block title %}Duplicates · Dealer CRM{% endblock %}
+
+{% macro record(c, same_email=false, same_phone=false) %}
+  <strong>{{ c.first_name }} {{ c.last_name }}</strong>
+  <a href="{{ url_for('customer', customer_id=c.customer_id) }}" target="_blank">#{{ c.customer_id }}</a><br>
+  {% if same_email %}<span class="match">{{ c.email }}</span>{% else %}{{ c.email or "no email" }}{% endif %}<br>
+  {% if same_phone %}<span class="match">{{ c.phone }}</span>{% else %}{{ c.phone or "no phone" }}{% endif %}
+  · zip {{ c.zip or "—" }}<br>
+  <span class="subtle-cell">
+    created {{ c.created_date.strftime("%b %d, %Y") }}
+    · {{ c.deal_count }} purchase{{ "s" if c.deal_count != 1 }}
+    · {{ c.ro_count }} service visit{{ "s" if c.ro_count != 1 }}
+  </span>
+{% endmacro %}
+
+{% block content %}
+  <h1>Duplicate review</h1>
+  <p class="subtle">
+    Likely duplicates share an email (ignoring upper/lower case) or a phone number (digits only).
+    Linking never changes the original records. It's saved separately and can be undone.
+  </p>
+
+  <nav class="tabs">
+    <a href="{{ url_for('duplicates', tab='review') }}" class="{{ 'active' if tab == 'review' }}">To review ({{ counts.review }})</a>
+    <a href="{{ url_for('duplicates', tab='linked') }}" class="{{ 'active' if tab == 'linked' }}">Linked ({{ counts.linked }})</a>
+    <a href="{{ url_for('duplicates', tab='different') }}" class="{{ 'active' if tab == 'different' }}">Different people ({{ counts.different }})</a>
+  </nav>
+
+  {% if tab == "review" %}
+
+    {% if not rows %}
+      <p>Nothing left to review.</p>
+    {% endif %}
+
+    {% for p in rows %}
+      <form method="post" class="pair">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="a" value="{{ p.a.customer_id }}">
+        <input type="hidden" name="b" value="{{ p.b.customer_id }}">
+        <input type="hidden" name="reason" value="{{ p.reason }}">
+
+        <div class="subtle-cell" style="margin-bottom:8px">
+          Match: {{ p.reason }} · choose which record is the main one
+        </div>
+        <div class="pair-records">
+          {% for c in (p.a, p.b) %}
+            <label>
+              <input type="radio" name="main" value="{{ c.customer_id }}"
+                     {{ "checked" if c.customer_id == p.suggested_main }}>
+              Main record{{ " (older)" if c.customer_id == p.suggested_main }}<br>
+              {{ record(c, p.same_email, p.same_phone) }}
+            </label>
+          {% endfor %}
+        </div>
+        <div class="pair-actions">
+          {# Two buttons, one form: formaction picks which address receives it. #}
+          <button type="submit" formaction="{{ url_for('link_pair') }}">Same person: link</button>
+          <button type="submit" class="secondary" formaction="{{ url_for('mark_different') }}">Different people</button>
+        </div>
+      </form>
+    {% endfor %}
+
+    <div class="manual">
+      <h2 style="margin-top:0">Link by customer number</h2>
+      <p class="subtle">For duplicates the list can't find, like records with no email or phone
+        (for example #2834 Bill White or #2874 Jim Peterson). Use search to find the numbers first.</p>
+      <form method="post" action="{{ url_for('link_by_number') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        Link record # <input name="extra_id" inputmode="numeric" required>
+        to main record # <input name="main_id" inputmode="numeric" required>
+        <button type="submit">Link</button>
+      </form>
+    </div>
+
+  {% elif tab == "linked" %}
+
+    {% if not rows %}
+      <p>No links yet.</p>
+    {% else %}
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Main record</th><th>Linked record</th><th>Reason</th><th>Linked</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for l in rows %}
+          <tr>
+            <td><a href="{{ url_for('customer', customer_id=l.primary_id) }}">{{ l.main_name }}</a> <span class="subtle-cell">#{{ l.primary_id }}</span></td>
+            <td><a href="{{ url_for('customer', customer_id=l.duplicate_id) }}">{{ l.extra_name }}</a> <span class="subtle-cell">#{{ l.duplicate_id }}</span></td>
+            <td>{{ l.match_reason }}</td>
+            <td class="nowrap">{{ l.linked_at.strftime("%b %d, %Y %H:%M") }}</td>
+            <td>
+              <form method="post" action="{{ url_for('unlink') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="extra_id" value="{{ l.duplicate_id }}">
+                <button type="submit" class="secondary">Unlink</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    {% endif %}
+
+  {% else %}
+
+    {% if not rows %}
+      <p>No pairs marked as different people.</p>
+    {% else %}
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Customer</th><th>Customer</th><th>Decided</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for n in rows %}
+          <tr>
+            <td><a href="{{ url_for('customer', customer_id=n.customer_id_low) }}">{{ n.low_name }}</a> <span class="subtle-cell">#{{ n.customer_id_low }}</span></td>
+            <td><a href="{{ url_for('customer', customer_id=n.customer_id_high) }}">{{ n.high_name }}</a> <span class="subtle-cell">#{{ n.customer_id_high }}</span></td>
+            <td class="nowrap">{{ n.decided_at.strftime("%b %d, %Y %H:%M") }}</td>
+            <td>
+              <form method="post" action="{{ url_for('undo_different') }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="a" value="{{ n.customer_id_low }}">
+                <input type="hidden" name="b" value="{{ n.customer_id_high }}">
+                <button type="submit" class="secondary">Back to review</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    {% endif %}
+
+  {% endif %}
+{% endblock %}

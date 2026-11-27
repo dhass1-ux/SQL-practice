@@ -1,0 +1,67 @@
+{#
+  search.html: the search box plus results. app.py passes:
+    text       what was typed (so the box keeps showing it)
+    customers  None before a search, otherwise a list of rows (maybe empty)
+    limit      the most rows a search returns
+#}
+{% extends "base.html" %}
+
+{% block title %}Search · Dealer CRM{% endblock %}
+
+{% block content %}
+  <h1>Customer search</h1>
+  <p class="subtle">Search by name, email or phone. Any phone format works.</p>
+
+  {# method="get" puts the search in the address bar (/search?q=...),
+     so a search can be bookmarked or refreshed. #}
+  <form method="get" action="/search" class="search">
+    <input type="search" name="q" value="{{ text }}" placeholder="e.g. Rogers, william.rogers906, 315-555-2532" autofocus>
+    <button type="submit">Search</button>
+  </form>
+
+  {% if customers is none %}
+    {% if text %}<p class="subtle">Type at least 2 characters.</p>{% endif %}
+  {% elif not customers %}
+    <p>No customers match “{{ text }}”.</p>
+  {% else %}
+    <p class="subtle">
+      {% if customers | length == limit %}
+        Showing the first {{ limit }} matches. Add more detail to narrow it down.
+      {% else %}
+        {{ customers | length }} match{{ "es" if customers | length != 1 }}.
+      {% endif %}
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Zip</th>
+          <th>Created</th>
+          <th class="num">Deals</th>
+          <th class="num">Service</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in customers %}
+        <tr>
+          <td>{{ c.customer_id }}</td>
+          {# url_for builds the address from the route's function name, e.g. /customers/34 #}
+          <td>
+            <a href="{{ url_for('customer', customer_id=c.customer_id) }}">{{ c.first_name }} {{ c.last_name }}</a>
+            {% if c.linked_to %}<span class="tag tag-linked">part of #{{ c.linked_to }}</span>{% endif %}
+          </td>
+          <td>{{ c.email or "—" }}</td>
+          <td>{{ c.phone or "—" }}</td>
+          <td>{{ c.zip or "—" }}</td>
+          <td>{{ c.created_date.strftime("%b %d, %Y") }}</td>
+          <td class="num">{{ c.deal_count }}</td>
+          <td class="num">{{ c.ro_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endblock %}
